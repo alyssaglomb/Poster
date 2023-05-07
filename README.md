@@ -4,3 +4,5 @@ This is a poster presentation about Economic Attitudes in Zimbabwe created using
 
 Data:
 Afrobarometer Data, Zimbabwe, Round 7, 2016/2017, available at http://www.afrobarometer.org
+
+[View poster](https://alyssaglomb.github.io/Poster/)
