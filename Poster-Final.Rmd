@@ -1,0 +1,175 @@
+---
+main_topsize: 0.2 
+main_bottomsize: 0.1
+#ESSENTIALS
+title: '**Economic Attitudes in Zimbabwe**'
+author:
+  - name: '**Alyssa Glomb**'
+    affil: 1
+    main: true
+    email: ag1741a@american.edu
+affiliation:
+  - num: 1
+    address: American University, SIS
+main_findings:
+  - "Impact of economic situations on political and social attitudes in Zimbabwe"
+primary_colour: "#0063B2FF"
+secondary_colour: "#376647"
+accent_colour: "#cc0000"
+output: 
+  posterdown::posterdown_betterport:
+    self_contained: true
+    pandoc_args: --mathjax
+    number_sections: false
+link-citations: true
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      tidy = FALSE,
+                      message = FALSE,
+                      fig.align = 'center',
+                      out.width = "100%")
+options(knitr.table.format = "html") 
+
+  library(tidyverse)
+  library(knitr)
+  library(stargazer)
+  library(kableExtra)
+  library(haven)
+  library(sjPlot)
+
+
+FctWhen = function(...) {
+  args = rlang::list2(...)
+  rhs = map(args, rlang::f_rhs)
+  cases = case_when( !!!args )
+  exec(fct_relevel, cases, !!!rhs)} 
+
+zim = read_sav("zim_r7_data.sav") 
+
+```
+
+# Introduction
+### Main Question
+Is the attitude of Zimbabwean citizens about the trajectory of the country impacted by economic situations?
+
+### Expectation
+Due to Zimbabwe's economic situation as a developing country and recent challenges with corruption in the private and political sectors, it is expected that economic factors (variables Q4A and Q6) will have an impact on respondent's overall view of the country (variable Q3).
+
+### Importance
+Zimbabwe is a democracy in Southern Africa that has faced political turmoil. The country  has presidential elections approaching in July 2023. It is important for both the political party in power as well as opposition parties to monitor public opinion on topics of general interest. 
+
+# Data
+### Data Citation
+Afrobarometer Data, Zimbabwe, Round 7, 2016/2017, available at http://www.afrobarometer.org.
+
+### Data Background
+The data used is from Afrobarometer which conducts surveys across the African continent. This research used the Round 7 Afrobarometer survey in Zimbabwe, conducted in 2016 and 2017. The specific variables examined are listed below.
+
+### Variables
+- Q3: Do you believe the country is going in the right direction overall?
+  - binary variable with options of right/wrong direction
+- Q4A: Country's present economic condition
+  - factor variable with five levels
+- Q6: Country's economic condition compared to the previous twelve months
+  - factor variable with five levels
+- URBRUR: Is respondent from a rural or urban area?
+  - binary variable with options of rural/urban
+
+
+```{r, fig.cap='', out.width="80%"}
+
+zim2 = zim %>%
+  mutate(
+    gen.outlook = FctWhen(
+      Q3 == 1 ~ "Wrong Direction",
+      Q3 == 2 ~ "Right Direction",
+      Q3 == 8-9 ~ "NA"),
+    pres.econ = FctWhen(
+      Q4A == 1 ~ "Very Bad",
+      Q4A == 2 ~ "Fairly Bad",
+      Q4A == 3 ~ "Neither Good nor Bad",
+      Q4A == 4 ~ "Fairly Good",
+      Q4A == 5 ~ "Very Good",
+      Q4A == 8-9 ~ "NA"),
+     past.econ = FctWhen(
+      Q6 == 1 ~ "Much Worse",
+      Q6 == 2 ~ "Worse",
+      Q6 == 3 ~ "Same",
+      Q6 == 4 ~ "Better",
+      Q6 == 5 ~ "Much Better",
+      Q6 == 8-9 ~ "NA"),
+     urban.rural = FctWhen(
+      URBRUR == 1 ~ "Urban",
+      URBRUR == 2 ~ "Rural"))
+
+zim3 = count(zim2, gen.outlook, pres.econ, past.econ, urban.rural) %>%
+    na.omit() %>%
+    mutate(percent = n/sum(n) * 100) 
+  
+ggplot(zim3, aes(x = gen.outlook, y = percent)) +
+    geom_col(width = 0.7)+
+      labs(x="Opinion of Country", 
+         y="Percent",
+         title='Q3: Would you say that the country is going in the \n wrong direction or going in the right direction?')+
+    coord_cartesian(expand = FALSE)+
+    theme_light()+
+      theme(plot.title=element_text(face="bold", size="16", hjust=0.5))
+
+ggplot(zim3, aes(x = pres.econ, y = percent)) +
+    geom_col()+
+      labs(x="Economic Opinion", 
+         y="Percent",
+         title='Q4A: How would you describe the present \n economic situation of the country?')+
+    coord_cartesian(expand = FALSE)+
+    theme_light()+
+      theme(plot.title=element_text(face="bold", size="16", hjust=0.5))
+
+ggplot(zim3, aes(x = past.econ, y = percent)) +
+    geom_col()+
+      labs(x="Current Economy vs Previous 12 Months", 
+         y="Percent",
+         title='Q6: Looking back, how would you rate present economic \n conditions compared to twelve months ago?')+
+    coord_cartesian(expand = FALSE)+
+    theme_light()+
+      theme(plot.title=element_text(face="bold", size="16", hjust=0.5))    
+
+ggplot(zim3, aes(x = urban.rural, y = percent)) +
+    geom_col(width = 0.7)+
+      labs(x="Location of respondent", 
+         y="Percent",
+         title='URBRUR: Is the respondent urban or rural?')+
+    coord_cartesian(expand = FALSE)+
+    theme_light()+
+      theme(plot.title=element_text(face="bold", size="16", hjust=0.5)) 
+    
+```
+
+These frequency tables show the spread of the data for the primary variables under study. 
+
+# Analysis and Results
+
+```{r reg, results = 'asis', out.width="80%"}
+
+zim3 = zim %>%
+  rename(
+    gen.outlook = Q3,
+    pres.econ = Q4A,
+    past.econ = Q6,
+    urban.rural = URBRUR)
+
+  mod1 = lm(gen.outlook ~ pres.econ, data = zim3)
+  mod2 = lm(gen.outlook ~ pres.econ + past.econ, data = zim3)
+  mod3 = lm(gen.outlook ~ pres.econ + past.econ + urban.rural, data = zim3)
+  
+  stargazer::stargazer(mod1, mod2, mod3, type = 'html')
+
+```
+
+# Findings
+Based on the data presented, attitudes towards economic situations are closely correlated and proven statistically significant with overall attitudes towards the country's success and trajectory, measured through Afrobarometer survey data.
+
+Multiple additional variables should also be examined in order to fully examine the relationship between economics and social and political situations, but the variables discussed here provide an important foundation of the overall economic attitude in Zimbabwe. 
+
